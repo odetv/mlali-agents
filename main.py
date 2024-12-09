@@ -1,10 +1,12 @@
 from langgraph.graph import END, START, StateGraph
 from utils.agents import assistantAgent, generalAgent, regulationAgent, resultWriterAgent, travelGuideAgent, travelPlannerAgent
 from utils.create_graph_image import get_graph_image
+from utils.debug_time import time_check
 from utils.states import AgentState
 
 
-def run(question):
+@time_check
+def runModel(question):
     workflow = StateGraph(AgentState)
     initial_state = assistantAgent({"question": question, "finishedAgents": set()})
     context = initial_state["question_type"]
@@ -39,5 +41,10 @@ def run(question):
     result = graph.invoke({"question": question})
     get_graph_image(graph)
 
+    answers = result.get("responseFinal", [])
+    contexts = result.get("answerAgents", "")
+    return contexts, answers
+
+
 # DEBUG QUESTION
-run("halo")
+# runModel("saya dari buleleng, ingin glamping")
