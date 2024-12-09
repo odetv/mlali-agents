@@ -28,7 +28,7 @@ def assistantAgent(state: AgentState):
         Tugas Anda sangat penting. Klasifikasikan atau parsing pertanyaan dari pengguna untuk dimasukkan ke variabel sesuai konteks.
         Tergantung pada jawaban Anda, akan mengarahkan ke agent yang tepat.
         Ada 4 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
-        - GENERAL_AGENT - Pertanyaan yang berkaitan dengan hal umum atau tidak jelas.
+        - GENERAL_AGENT - Pertanyaan yang tidak menyebutkan segala informasi mengenai perjalanan ingin kemana.
         - TRAVELGUIDE_AGENT - Pertanyaan yang menyebutkan segala informasi mengenai perjalanan ingin kemana.
         - TRAVELPLANNER_AGENT - Pertanyaan yang menyebutkan mengenai darimana berasal, tujuan ingin kemana, dan preferensi perjalanan mengenai apa.
         - REGULATION_AGENT - Pertanyaan yang menyebutkan mengenai regulasi atau aturan-aturan yang diperlukan di tempat wisata.
