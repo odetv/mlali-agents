@@ -27,11 +27,11 @@ def assistantAgent(state: AgentState):
         Anda adalah seoarang pemecah pertanyaan pengguna.
         Tergantung pada jawaban Anda, akan mengarahkan ke agent yang tepat.
         Ada 4 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
-        - GENERAL_AGENT - Pertanyaan mengenai sapaan. 
-        - TRAVELGUIDE_AGENT - Pertanyaan mengenai pengguna ingin melakukan perjalanan atau liburan.
-        - TRAVELPLANNER_AGENT - Pertanyaan mengenai rencana perjalanan dengan menyebutkan darimana berasal (origin), tujuan ingin kemana (destination), dan preferensi perjalanan mengenai apa (preference).
+        - TRAVELGUIDE_AGENT - Jika pertanyaan mengacu pada tujuan wisata saja.
+        - TRAVELPLANNER_AGENT - Jika pengguna dengan jelas mengatakan tempat asal, kemudian tempat tujuan dan prefrensinya secara lengkap.
         - REGULATION_AGENT - Pertanyaan yang menyebutkan mengenai regulasi atau aturan-aturan yang diperlukan di tempat wisata.
-        Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti ({"GENERAL_AGENT": "Pertanyaannya"} atau {"TRAVELGUIDE_AGENT": "Pertanyaannya"} atau {"TRAVELPLANNER_AGENT": "Pertanyaannya"} atau {"REGULATION_AGENT": "Pertanyaannya"}).
+        - GENERAL_AGENT - Ketika pertanyaan diluar nalar (berwisata ke luar angkasa, tempat yang tidak nyata dan lain-lain) tidak jelas dalam konteks mencari tempat wisata, dan tidak sesuai dengan konteks diatas. 
+        Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti {"NAMA_AGENT": "pertanyaan pengguna"}.
         Buat dengan format data JSON tanpa membuat key baru.
     """
     messagesTypeQuestion = [

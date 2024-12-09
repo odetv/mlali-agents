@@ -40,4 +40,4 @@ def run(question):
     get_graph_image(graph)
 
 # DEBUG QUESTION
-run("berikan rekomendasi tempat wisata di ubud")
+run("halo")
