@@ -5,6 +5,7 @@ description = "Agents untuk riset aplikasi mlali"
 authors = ["Resika Arthana <resika.arthana@gmail.com>"]
 license = "Edukasi"
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -17,6 +18,10 @@ typing-extensions = "^4.12.2"
 pypdf = "^5.1.0"
 python-multipart = "^0.0.19"
 python-dotenv = "^1.0.1"
+requests = "^2.32.3"
+faiss-cpu = "1.8.0"
+fastapi = "^0.115.6"
+uvicorn = "^0.32.1"
 
 
 [build-system]
