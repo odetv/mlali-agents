@@ -7,3 +7,7 @@ langchain-community
 typing-extensions
 python-multipart
 pypdf
+requests
+faiss-cpu==1.8.0
+fastapi
+uvicorn
