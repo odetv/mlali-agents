@@ -13,6 +13,8 @@ class AgentState(TypedDict):
     travelguideQuestion: str
     travelplannerQuestion: str
     regulationQuestion: str
+    travelguideResponse: str
+    travelplannerResponse: str
     totalAgents: int
     finishedAgents: Set[str]
     answerAgents: Annotated[Sequence[AnswerState], add]

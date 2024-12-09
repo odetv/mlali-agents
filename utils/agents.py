@@ -25,14 +25,13 @@ def assistantAgent(state: AgentState):
 
     promptTypeQuestion = """
         Anda adalah seoarang pemecah pertanyaan pengguna.
-        Tugas Anda sangat penting. Klasifikasikan atau parsing pertanyaan dari pengguna untuk dimasukkan ke variabel sesuai konteks.
         Tergantung pada jawaban Anda, akan mengarahkan ke agent yang tepat.
         Ada 4 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
-        - GENERAL_AGENT - Pertanyaan yang tidak menyebutkan segala informasi mengenai perjalanan ingin kemana.
-        - TRAVELGUIDE_AGENT - Pertanyaan yang menyebutkan segala informasi mengenai perjalanan ingin kemana.
-        - TRAVELPLANNER_AGENT - Pertanyaan yang menyebutkan mengenai darimana berasal, tujuan ingin kemana, dan preferensi perjalanan mengenai apa.
+        - GENERAL_AGENT - Pertanyaan mengenai sapaan. 
+        - TRAVELGUIDE_AGENT - Pertanyaan mengenai pengguna ingin melakukan perjalanan atau liburan.
+        - TRAVELPLANNER_AGENT - Pertanyaan mengenai rencana perjalanan dengan menyebutkan darimana berasal (origin), tujuan ingin kemana (destination), dan preferensi perjalanan mengenai apa (preference).
         - REGULATION_AGENT - Pertanyaan yang menyebutkan mengenai regulasi atau aturan-aturan yang diperlukan di tempat wisata.
-        Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti ({"NAMAAGENT_AGENT": "Pertanyaannya"}).
+        Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti ({"GENERAL_AGENT": "Pertanyaannya"} atau {"TRAVELGUIDE_AGENT": "Pertanyaannya"} atau {"TRAVELPLANNER_AGENT": "Pertanyaannya"} atau {"REGULATION_AGENT": "Pertanyaannya"}).
         Buat dengan format data JSON tanpa membuat key baru.
     """
     messagesTypeQuestion = [
@@ -103,22 +102,30 @@ def travelGuideAgent(state: AgentState):
         HumanMessage(content=state["travelguideQuestion"])
     ]
     response = chat_llm(messages)
-    agentOpinion = {
-        "answer": response
-    }
     print("\n\nTRAVELGUIDE ANSWER:::", response)
     state["finishedAgents"].add("tarvelguide_agent")
-    return {"answerAgents": [agentOpinion]}
+    state["travelguideResponse"] = response
+    return state
 
 
 def regulationAgent(state: AgentState):
     print("\n--- REGULATION AGENT ---")
+
+    travelguideResponse = state.get("travelguideResponse", "")
+    travelplannerResponse = state.get("travelplannerResponse", "")
+
+    # If either one is None or empty, set them to ""
+    if not travelguideResponse:
+        travelguideResponse = ""
+    if not travelplannerResponse:
+        travelplannerResponse = ""
+
     prompt = f"""
         Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
+        Ini konteksnya: {travelguideResponse} {travelplannerResponse}
     """
     messages = [
-        SystemMessage(content=prompt),
-        HumanMessage(content=state["regulationQuestion"])
+        SystemMessage(content=prompt)
     ]
     response = chat_llm(messages)
     agentOpinion = {
@@ -140,12 +147,10 @@ def travelPlannerAgent(state: AgentState):
         HumanMessage(content=state["travelplannerQuestion"])
     ]
     response = chat_llm(messages)
-    agentOpinion = {
-        "answer": response
-    }
     print("\n\nTRAVELPLANNER ANSWER:::", response)
     state["finishedAgents"].add("travelplanner_agent")
-    return {"answerAgents": [agentOpinion]}
+    state["travelplannerResponse"] = response
+    return state
 
 
 def resultWriterAgent(state: AgentState):
