@@ -76,25 +76,103 @@ def assistantAgent(state: AgentState):
 
 
 def generalAgent(state: AgentState):
-    # pertanyaan umum
-    return ""
+    print("\n--- GENERAL AGENT ---")
+    prompt = f"""
+        Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
+    """
+    messages = [
+        SystemMessage(content=prompt),
+        HumanMessage(content=state["generalQuestion"])
+    ]
+    response = chat_llm(messages)
+    agentOpinion = {
+        "answer": response
+    }
+    print("\n\nGENERAL ANSWER:::", response)
+    state["finishedAgents"].add("general_agent")
+    return {"answerAgents": [agentOpinion]}
 
 
 def travelGuideAgent(state: AgentState):
-    # travel guide
-    return ""
+    print("\n--- TRAVELGUIDE AGENT ---")
+    prompt = f"""
+        Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
+    """
+    messages = [
+        SystemMessage(content=prompt),
+        HumanMessage(content=state["travelguideQuestion"])
+    ]
+    response = chat_llm(messages)
+    agentOpinion = {
+        "answer": response
+    }
+    print("\n\nTRAVELGUIDE ANSWER:::", response)
+    state["finishedAgents"].add("tarvelguide_agent")
+    return {"answerAgents": [agentOpinion]}
 
 
 def regulationAgent(state: AgentState):
-    # agent yang mencari aturan2 di tempat wisata
-    return ""
+    print("\n--- REGULATION AGENT ---")
+    prompt = f"""
+        Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
+    """
+    messages = [
+        SystemMessage(content=prompt),
+        HumanMessage(content=state["regulationQuestion"])
+    ]
+    response = chat_llm(messages)
+    agentOpinion = {
+        "answer": response
+    }
+    print("\n\nREGULATION ANSWER:::", response)
+    state["finishedAgents"].add("regulation_agent")
+    return {"answerAgents": [agentOpinion]}
 
 
 def travelPlannerAgent(state: AgentState):
     # input : origin, destination, preference
-    return ""
+    print("\n--- TRAVELPLANNER AGENT ---")
+    prompt = f"""
+        Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
+    """
+    messages = [
+        SystemMessage(content=prompt),
+        HumanMessage(content=state["travelplannerQuestion"])
+    ]
+    response = chat_llm(messages)
+    agentOpinion = {
+        "answer": response
+    }
+    print("\n\nTRAVELPLANNER ANSWER:::", response)
+    state["finishedAgents"].add("travelplanner_agent")
+    return {"answerAgents": [agentOpinion]}
 
 
 def resultWriterAgent(state: AgentState):
-    # travel guide
-    return ""
+    if len(state["finishedAgents"]) < state["totalAgents"]:
+        print("\nMenunggu agent lain menyelesaikan tugas...")
+        return None
+    
+    elif len(state["finishedAgents"]) == state["totalAgents"]:
+        info = "\n--- RESULT WRITER AGENT ---"
+        print(info)
+        prompt = f"""
+            Berikut pedoman yang harus diikuti untuk menulis ulang informasi:
+            - Berikan informasi secara lengkap dan jelas apa adanya sesuai informasi yang diberikan.
+            - Urutan informasi sesuai dengan urutan pertanyaan.
+            - Jangan menyebut ulang pertanyaan secara eksplisit.
+            - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
+            - Jangan tawarkan informasi lainnya selain informasi yang diberikan yang didapat saja.
+            - Hasilkan response dalam format Markdown.
+            Berikut adalah informasinya:
+            {state["answerAgents"]}
+        """
+        messages = [
+            SystemMessage(content=prompt),
+            HumanMessage(content=state["question"])
+        ]
+        response = chat_llm(messages)
+        print(response)
+        state["responseFinal"] = response
+
+        return {"responseFinal": state["responseFinal"]}
