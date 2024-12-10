@@ -80,7 +80,7 @@ app = FastAPI(
     summary="API Mlali Agents",
     version="0.0.1",
     docs_url="/docs",
-    redoc_url=None,
+    redoc_url="/help",
     openapi_url="/openapimlali.json"
 )
 
