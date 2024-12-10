@@ -29,7 +29,7 @@ def processRegulation():
     )
     chunks = text_splitter.split_documents(documents)
 
-    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-large"))
+    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-small"))
     vectordb.save_local(VECTORDB_DIR)
 
 
@@ -52,7 +52,7 @@ def processTravelGuide():
     )
     chunks = text_splitter.split_documents(documents)
 
-    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-large"))
+    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-small"))
     vectordb.save_local(VECTORDB_DIR)
 
 
@@ -75,7 +75,7 @@ def processTravelPlanner():
     )
     chunks = text_splitter.split_documents(documents)
 
-    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-large"))
+    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-small"))
     vectordb.save_local(VECTORDB_DIR)
 
 
