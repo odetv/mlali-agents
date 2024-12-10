@@ -80,7 +80,7 @@ app = FastAPI(
     summary="API Mlali Agents",
     version="0.0.1",
     docs_url="/docs",
-    redoc_url=None,
+    redoc_url="/help",
     openapi_url="/openapimlali.json"
 )
 
@@ -121,7 +121,7 @@ async def root(request_http: Request, token: str = Depends(verify_bearer_token))
         status_code=200,
         success=True,
         message="OK",
-        data={"timestamp": timestamp, "description": "API Virtual Assistant Undiksha"}
+        data={"timestamp": timestamp, "description": "API Mlali Agents"}
     )
 
 

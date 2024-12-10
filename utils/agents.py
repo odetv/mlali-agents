@@ -3,6 +3,7 @@ import os
 import re
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
 from utils.debug_time import time_check
 from utils.states import AgentState
@@ -13,7 +14,7 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 MODEL_LLM = "gpt-4o-mini"
 LLM = ChatOpenAI(api_key=openai_api_key, model=MODEL_LLM, temperature=0, streaming=True)
-MODEL_EMBEDDING = "text-embedding-3-large"
+MODEL_EMBEDDING = "text-embedding-3-small"
 EMBEDDER = OpenAIEmbeddings(api_key=openai_api_key, model=MODEL_EMBEDDING)
 
 
@@ -45,7 +46,7 @@ def assistantAgent(state: AgentState):
         Ada 4 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
         - TRAVELGUIDE_AGENT - Jika pertanyaan mengacu pada tujuan wisata saja atau disebutkan juga dia darimana.
         - TRAVELPLANNER_AGENT - Hanya jika pengguna dengan jelas mengatakan tempat asal, kemudian tempat tujuan dan prefrensinya secara lengkap.
-        - REGULATION_AGENT - Pertanyaan yang menyebutkan mengenai regulasi atau aturan-aturan yang diperlukan di tempat wisata.
+        - REGULATION_AGENT - Pertanyaan yang menyebutkan mengenai regulasi atau aturan-aturan yang perlu disiapkan di tempat wisata atau tempat-tempat tertentu yang vital.
         - GENERAL_AGENT - Ketika pertanyaan diluar nalar (berwisata ke luar angkasa, tempat yang tidak nyata dan lain-lain) tidak jelas dalam konteks mencari tempat wisata, dan tidak sesuai dengan konteks diatas. 
         Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti {"NAMA_AGENT": "pertanyaan pengguna"}.
         Buat dengan format data JSON tanpa membuat key baru.
@@ -115,19 +116,38 @@ def generalAgent(state: AgentState):
 def travelGuideAgent(state: AgentState):
     print("\n--- TRAVELGUIDE AGENT ---")
 
-    question = state["question"]
+    # question = state["question"]
 
-    retriever_result = retrieve(query=question, db_path="src/db/vector_db")
+    # retriever_result = retrieve(query=question, db_path="src/db/vector_db")
+
+    # prompt = f"""
+    #     Anda adalah Travel Guide dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang pemandu perjalanan berwisata.
+    #     Tugas anda adalah memberikan panduan perjalanan wisata kepada pengguna sesuai permintaannya. jelaskan berdasarkan informasi berikut:
+    #     {retriever_result}
+    # """
+
+    question = state["travelguideQuestion"]
+    
+    try:
+        vectordb = FAISS.load_local("src/db/db_travelguide", EMBEDDER, allow_dangerous_deserialization=True)
+        retriever = vectordb.similarity_search(question, k=5)
+        context = "\n\n".join([doc.page_content for doc in retriever])
+    except RuntimeError as e:
+        if "could not open" in str(e):
+            raise RuntimeError("Vector database FAISS index file not found. Please ensure the index file exists at the specified path.")
+        else:
+            raise
 
     prompt = f"""
         Anda adalah Travel Guide dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang pemandu perjalanan berwisata.
-        Tugas anda adalah memberikan panduan perjalanan wisata kepada pengguna sesuai permintaannya. jelaskan berdasarkan informasi berikut:
-        {retriever_result}
+        Tugas anda adalah memberikan panduan perjalanan wisata kepada pengguna sesuai dengan konteks.
+        Hanya gunakan informasi dari konteks berikut: {context}
     """
+    print("context:::", prompt)
 
     messages = [
         SystemMessage(content=prompt),
-        HumanMessage(content=state["travelguideQuestion"])
+        HumanMessage(content=question)
     ]
 
 
