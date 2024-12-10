@@ -1,0 +1,13 @@
+python-dotenv
+langchain
+langgraph
+langchain-core
+langchain-openai
+langchain-community
+typing-extensions
+python-multipart
+pypdf
+requests
+faiss-cpu==1.8.0
+fastapi
+uvicorn
