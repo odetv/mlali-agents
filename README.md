@@ -52,7 +52,7 @@ atau
 Jalankan dengan API (Dokumentasi: `/docs`, Spesifikasi: `/openapimlali.json`, Help: `/help`)
 
 ```bash
-  uvicorn api.api:app --host 0.0.0.0 --port XXXX --workers X
+  uvicorn api:app --host 0.0.0.0 --port XXXX --workers X
 ```
 
 Atau
