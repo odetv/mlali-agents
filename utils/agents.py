@@ -7,6 +7,7 @@ from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
 from utils.debug_time import time_check
 from utils.states import AgentState
+from utils.retrieve import retrieve
 
 
 load_dotenv()
@@ -115,6 +116,16 @@ def generalAgent(state: AgentState):
 def travelGuideAgent(state: AgentState):
     print("\n--- TRAVELGUIDE AGENT ---")
 
+    # question = state["question"]
+
+    # retriever_result = retrieve(query=question, db_path="src/db/vector_db")
+
+    # prompt = f"""
+    #     Anda adalah Travel Guide dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang pemandu perjalanan berwisata.
+    #     Tugas anda adalah memberikan panduan perjalanan wisata kepada pengguna sesuai permintaannya. jelaskan berdasarkan informasi berikut:
+    #     {retriever_result}
+    # """
+
     question = state["travelguideQuestion"]
     
     try:
@@ -133,10 +144,13 @@ def travelGuideAgent(state: AgentState):
         Hanya gunakan informasi dari konteks berikut: {context}
     """
     print("context:::", prompt)
+
     messages = [
         SystemMessage(content=prompt),
         HumanMessage(content=question)
     ]
+
+
     response = chat_llm(messages)
     print("\n\nTRAVELGUIDE ANSWER:::", response)
     state["finishedAgents"].add("tarvelguide_agent")
