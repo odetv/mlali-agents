@@ -42,9 +42,8 @@ def assistantAgent(state: AgentState):
     promptTypeQuestion = """
         Anda adalah seoarang pemecah pertanyaan pengguna.
         Tergantung pada jawaban Anda, akan mengarahkan ke agent yang tepat.
-        Ada 4 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
+        Ada 3 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
         - TRAVELGUIDE_AGENT - Jika pertanyaan mengacu pada tujuan wisata saja atau disebutkan juga dia darimana.
-        - TRAVELPLANNER_AGENT - Hanya jika pengguna dengan jelas mengatakan tempat asal, kemudian tempat tujuan dan prefrensinya secara lengkap.
         - REGULATION_AGENT - Pertanyaan yang menyebutkan mengenai regulasi atau aturan-aturan yang perlu disiapkan di tempat wisata atau tempat-tempat tertentu yang vital.
         - GENERAL_AGENT - Ketika pertanyaan diluar nalar (berwisata ke luar angkasa, tempat yang tidak nyata dan lain-lain) tidak jelas dalam konteks mencari tempat wisata, dan tidak sesuai dengan konteks diatas. 
         Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti {"NAMA_AGENT": "pertanyaan pengguna"}.
@@ -63,8 +62,6 @@ def assistantAgent(state: AgentState):
     if "general_agent" in state["question_type"]:
         total_agents += 1
     if "travelguide_agent" in state["question_type"]:
-        total_agents += 2
-    if "travelplanner_agent" in state["question_type"]:
         total_agents += 2
     if "regulation_agent" in state["question_type"]:
         total_agents += 1
@@ -184,13 +181,13 @@ def travelPlannerAgent(state: AgentState):
     """
     messages = [
         SystemMessage(content=prompt),
-        HumanMessage(content=state["travelplannerQuestion"])
+        HumanMessage(content=state["question"])
     ]
     response = chat_llm(messages)
     print("\n\nTRAVELPLANNER ANSWER:::", response)
     state["finishedAgents"].add("travelplanner_agent")
     state["travelplannerResponse"] = response
-    return state
+    return state["travelplannerResponse"]
 
 
 @time_check
