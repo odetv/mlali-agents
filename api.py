@@ -15,7 +15,7 @@ from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
-from main import runModel
+from main import runModel, runModelWithForm
 
 
 load_dotenv()
@@ -50,7 +50,10 @@ class ProcessRequest(BaseModel):
     chunk_overlap: int
     class Config:
         protected_namespaces = ()
-
+class ChatFormRequest(BaseModel):
+    origin: str
+    destination: str
+    preference: str
 
 # Metadata API
 tags_metadata = [
@@ -123,6 +126,44 @@ async def root(request_http: Request, token: str = Depends(verify_bearer_token))
         message="OK",
         data={"timestamp": timestamp, "description": "API Mlali Agents"}
     )
+
+
+# Endpoint untuk chat-form
+@app.post("/chat-form", tags=["chat"])
+async def chat_form_conversation(request: ChatFormRequest, token: str = Depends(verify_bearer_token)):
+    timestamp = get_current_time()
+
+    # Extract parameter dari request
+    origin = request.origin
+    destination = request.destination
+    preference = request.preference
+
+    try:
+        # Panggil runModelWithForm dengan tiga parameter: origin, destination, dan preference
+        _, answers = runModelWithForm(origin, destination, preference)
+
+        # Membuat response dengan data yang diterima
+        return api_response(
+            status_code=200,
+            success=True,
+            message="OK",
+            data=[{
+                "timestamp": timestamp,
+                "origin": origin,
+                "destination": destination,
+                "preference": preference,
+                "answers": answers
+            }]
+        )
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"{e.detail}")
+    except Exception as e:
+        return api_response(
+            status_code=500,
+            success=False,
+            message=f"Terjadi kesalahan yang tidak terduga. Pastikan LLM dan Embedder Service yang digunakan pada environment 'openai', lakukan proses embedding ulang, dan silahkan coba kembali. Jika masalah ini terus muncul, kemungkinan terdapat masalah pada LLM atau Embedder Service. {str(e)}",
+            data=None
+        )
 
 
 # Endpoint untuk melihat daftar file datasets regulation (List)
