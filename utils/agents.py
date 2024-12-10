@@ -4,6 +4,7 @@ import re
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
+from utils.debug_time import time_check
 from utils.states import AgentState
 
 
@@ -11,15 +12,29 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 MODEL_LLM = "gpt-4o-mini"
 LLM = ChatOpenAI(api_key=openai_api_key, model=MODEL_LLM, temperature=0, streaming=True)
-MODEL_EMBEDDING = "text-embedding-3-small"
+MODEL_EMBEDDING = "text-embedding-3-large"
 EMBEDDER = OpenAIEmbeddings(api_key=openai_api_key, model=MODEL_EMBEDDING)
 
 
 def chat_llm(question: str):
-    result = LLM.invoke(question).content if hasattr(LLM.invoke(question), "content") else LLM.invoke(question)
+    openai = ChatOpenAI(api_key=openai_api_key, model=MODEL_LLM, temperature=0, streaming=True)
+    result = ""
+    try:
+        stream_response = openai.stream(question)
+        for chunk in stream_response:
+            token = chunk.content
+            result += token
+            print(token, end="", flush=True)
+    except Exception as e:
+        error = str(e)
+        if "401" in error and "Incorrect API key" in error:
+            raise ValueError("Incorrect API key provided. Please check your OpenAI API key.")
+        else:
+            raise e
     return result
 
 
+@time_check
 def assistantAgent(state: AgentState):
     print("\n--- ASSISTANT AGENT ---")
 
@@ -27,11 +42,11 @@ def assistantAgent(state: AgentState):
         Anda adalah seoarang pemecah pertanyaan pengguna.
         Tergantung pada jawaban Anda, akan mengarahkan ke agent yang tepat.
         Ada 4 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
-        - GENERAL_AGENT - Pertanyaan mengenai sapaan. 
-        - TRAVELGUIDE_AGENT - Pertanyaan mengenai pengguna ingin melakukan perjalanan atau liburan.
-        - TRAVELPLANNER_AGENT - Pertanyaan mengenai rencana perjalanan dengan menyebutkan darimana berasal (origin), tujuan ingin kemana (destination), dan preferensi perjalanan mengenai apa (preference).
+        - TRAVELGUIDE_AGENT - Jika pertanyaan mengacu pada tujuan wisata saja atau disebutkan juga dia darimana.
+        - TRAVELPLANNER_AGENT - Hanya jika pengguna dengan jelas mengatakan tempat asal, kemudian tempat tujuan dan prefrensinya secara lengkap.
         - REGULATION_AGENT - Pertanyaan yang menyebutkan mengenai regulasi atau aturan-aturan yang diperlukan di tempat wisata.
-        Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti ({"GENERAL_AGENT": "Pertanyaannya"} atau {"TRAVELGUIDE_AGENT": "Pertanyaannya"} atau {"TRAVELPLANNER_AGENT": "Pertanyaannya"} atau {"REGULATION_AGENT": "Pertanyaannya"}).
+        - GENERAL_AGENT - Ketika pertanyaan diluar nalar (berwisata ke luar angkasa, tempat yang tidak nyata dan lain-lain) tidak jelas dalam konteks mencari tempat wisata, dan tidak sesuai dengan konteks diatas. 
+        Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti {"NAMA_AGENT": "pertanyaan pengguna"}.
         Buat dengan format data JSON tanpa membuat key baru.
     """
     messagesTypeQuestion = [
@@ -47,9 +62,9 @@ def assistantAgent(state: AgentState):
     if "general_agent" in state["question_type"]:
         total_agents += 1
     if "travelguide_agent" in state["question_type"]:
-        total_agents += 1
+        total_agents += 2
     if "travelplanner_agent" in state["question_type"]:
-        total_agents += 1
+        total_agents += 2
     if "regulation_agent" in state["question_type"]:
         total_agents += 1
 
@@ -73,11 +88,14 @@ def assistantAgent(state: AgentState):
     return state
 
 
-
+@time_check
 def generalAgent(state: AgentState):
     print("\n--- GENERAL AGENT ---")
     prompt = f"""
-        Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
+        Anda adalah Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang wisata.
+        Pertanyaan pengguna terkadang membingungkan, coba pahami dan berikan respons baik sehingga pengguna merasa nyaman.
+        Jika membingungkan, rekomendasikan beberapa hal mengenai travel dalam berwisata.
+        Jangan merespons hal-hal yang diluar dari konteks wisata.
     """
     messages = [
         SystemMessage(content=prompt),
@@ -92,10 +110,12 @@ def generalAgent(state: AgentState):
     return {"answerAgents": [agentOpinion]}
 
 
+@time_check
 def travelGuideAgent(state: AgentState):
     print("\n--- TRAVELGUIDE AGENT ---")
     prompt = f"""
-        Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
+        Anda adalah Travel Guide dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang pemandu perjalanan berwisata.
+        Tugas anda adalah memberikan panduan perjalanan wisata kepada pengguna sesuai permintaannya.
     """
     messages = [
         SystemMessage(content=prompt),
@@ -108,21 +128,24 @@ def travelGuideAgent(state: AgentState):
     return state
 
 
+@time_check
 def regulationAgent(state: AgentState):
     print("\n--- REGULATION AGENT ---")
 
     travelguideResponse = state.get("travelguideResponse", "")
     travelplannerResponse = state.get("travelplannerResponse", "")
 
-    # If either one is None or empty, set them to ""
     if not travelguideResponse:
         travelguideResponse = ""
     if not travelplannerResponse:
         travelplannerResponse = ""
 
     prompt = f"""
-        Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
-        Ini konteksnya: {travelguideResponse} {travelplannerResponse}
+        Anda adalah Travel Regulation dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang regulasi atau aturan-aturan pada tempat-tempat atau daerah wisata.
+        Tugas anda adalah memberikan aturan-aturan regulasi pada suatu daerah atau tempat wisata kepada pengguna sesuai informasi yang dituju.
+        Jangan mengubah isi dari informasi yang diberikan, cukup tambahkan regulasi atau aturan-aturan sesuai dengan informasi yang diberikan.
+        Tuliskan regulasinya secara implisit pada deskripsinya.
+        Berikut adalah informasinya: {travelguideResponse} {travelplannerResponse}
     """
     messages = [
         SystemMessage(content=prompt)
@@ -136,11 +159,12 @@ def regulationAgent(state: AgentState):
     return {"answerAgents": [agentOpinion]}
 
 
+@time_check
 def travelPlannerAgent(state: AgentState):
-    # input : origin, destination, preference
     print("\n--- TRAVELPLANNER AGENT ---")
     prompt = f"""
-        Anda seorang yang memiliki pengetahuan yang sangat luas dan hebat tentang destinasi wisata.
+        Anda adalah Travel Planner dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang perencanaan dalam perjalanan wisata.
+        Tugas anda adalah memberikan perencanaan sesuai dengan origin atau asal pengguna, destination atau tujuan pengguna, dan preference atau hal-hal yang diinginkan pengguna sesuai permintaannya.
     """
     messages = [
         SystemMessage(content=prompt),
@@ -153,6 +177,7 @@ def travelPlannerAgent(state: AgentState):
     return state
 
 
+@time_check
 def resultWriterAgent(state: AgentState):
     if len(state["finishedAgents"]) < state["totalAgents"]:
         print("\nMenunggu agent lain menyelesaikan tugas...")
