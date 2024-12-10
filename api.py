@@ -121,7 +121,7 @@ async def root(request_http: Request, token: str = Depends(verify_bearer_token))
         status_code=200,
         success=True,
         message="OK",
-        data={"timestamp": timestamp, "description": "API Virtual Assistant Undiksha"}
+        data={"timestamp": timestamp, "description": "API Mlali Agents"}
     )
 
 
