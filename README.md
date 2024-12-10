@@ -41,10 +41,18 @@ Buat dan Lengkapi file environment variabel (.env)
   VA_BEARER_TOKEN="YOUR_VA_BEARER_TOKEN"
 ```
 
-Jalankan dengan API (Dokumentasi: `/docs` atau `/openapimlali.json`)
+Jalankan dengan Web Streamlit (Frontpage: `/`)
 
 ```bash
-  uvicorn api.api:app --host 0.0.0.0 --port XXXX --workers X
+  streamlit run streamlit.py --server.port XXXX
+```
+
+atau
+
+Jalankan dengan API (Dokumentasi: `/docs`, Spesifikasi: `/openapimlali.json`, Help: `/help`)
+
+```bash
+  uvicorn api:app --host 0.0.0.0 --port XXXX --workers X
 ```
 
 Atau
