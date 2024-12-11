@@ -14,7 +14,9 @@ class AgentState(TypedDict):
     travelplannerQuestion: str
     regulationQuestion: str
     travelguideResponse: str
+    travelGuideResponseKeyword: str
     travelplannerResponse: str
+    travelplannerResponseKeyword: str
     regulationResponse: str
     totalAgents: int
     finishedAgents: Set[str]

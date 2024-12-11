@@ -133,8 +133,21 @@ def travelGuideAgent(state: AgentState):
         HumanMessage(content=question)
     ]
     response = chat_llm(messages)
-    state["finishedAgents"].add("tarvelguide_agent")
     state["travelguideResponse"] = response
+
+    promptKeyword = f"""
+        Berikan keyword nama-nama tempat dari informasi berikut: {response}
+        - Contoh penulisan: (Keyword: Glamour, Kebun Binatang, Museum)
+        - Pisahkan dengan tanda koma.
+        - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
+    """
+    messagesKeyword = [
+        SystemMessage(content=promptKeyword)
+    ]
+    responseKeyword = chat_llm(messagesKeyword)
+    state["travelGuideResponseKeyword"] = responseKeyword
+
+    state["finishedAgents"].add("tarvelguide_agent")
     return state
 
 
@@ -146,7 +159,7 @@ def regulationAgent(state: AgentState):
     if not travelguideResponse:
         travelguideResponse = ""
 
-    question = travelguideResponse
+    question = f"""{state["question"]} {state["travelGuideResponseKeyword"]}"""
     
     try:
         vectordb = FAISS.load_local("src/db/db_regulation", EMBEDDER, allow_dangerous_deserialization=True)
@@ -194,7 +207,7 @@ def resultWriterAgent(state: AgentState):
             - Berikan informasi secara lengkap dan jelas apa adanya sesuai informasi yang diberikan.
             - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
             - Jangan tawarkan informasi lainnya selain informasi yang diberikan yang didapat saja.
-            - Jangan mengubah seperti isi, sumber dan regulasi yang ada pada informasi.
+            - Jangan pernah mengubah seperti isi, sumber dan regulasi yang tercantum pada informasi, karena tugas anda adalah menulis ulang informasi.
             - Hasilkan response dalam format Markdown.
             Berikut adalah informasinya:
             {state["answerAgents"]}

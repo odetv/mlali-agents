@@ -45,17 +45,26 @@ def travelPlannerFormAgent(state: AgentState):
     ]
     response = chat_llm(messages)
     state["travelplannerResponse"] = response
-    return {"travelplannerResponse": state["travelplannerResponse"]}
+
+    promptKeyword = f"""
+        Berikan keyword nama-nama tempat dari informasi berikut: {response}
+        - Contoh penulisan: (Keyword: Glamour, Kebun Binatang, Museum)
+        - Pisahkan dengan tanda koma.
+        - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
+    """
+    messagesKeyword = [
+        SystemMessage(content=promptKeyword)
+    ]
+    responseKeyword = chat_llm(messagesKeyword)
+    state["travelplannerResponseKeyword"] = responseKeyword
+
+    return state
 
 
 def regulationFormAgent(state: AgentState):
     print("\n--- REGULATION FORM AGENT ---")
 
-    origin = state["origin"]
-    destination = state["destination"]
-    preference = state["preference"]
-
-    question = f"""Saya dari {origin} ingin ke {destination}, dengan preference {preference}"""
+    question = state["travelplannerResponseKeyword"]
     
     try:
         vectordb = FAISS.load_local("src/db/db_regulation", EMBEDDER, allow_dangerous_deserialization=True)
@@ -81,4 +90,4 @@ def regulationFormAgent(state: AgentState):
     ]
     response = chat_llm(messages)
     state["regulationResponse"] = response
-    return {"regulationResponse": state["regulationResponse"]}
+    return state
