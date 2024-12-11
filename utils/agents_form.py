@@ -34,7 +34,8 @@ def travelPlannerFormAgent(state: AgentState):
 
     prompt = f"""
         Anda adalah Travel Planner dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang perencanaan dalam perjalanan wisata.
-        Tugas anda adalah memberikan tempat rekomendasi yang cocok dan perencanaan perjalanan dari {origin} ke {destination}, dengan preference: {preference}.
+        Tugas anda adalah memberikan tempat rekomendasi yang cocok dan perencanaan perjalanan dari {origin}, ke {destination}, dengan preference {preference}.
+        Jika perjalanan dari {origin}, ke {destination}, dengan preference {preference} tidak jelas, maka minta kembali pengguna untuk memasukkan ulang dengan benar.
         - Berikut data yang ada pada database: {context}
         - Anda boleh menjawab menggunakan pengetahuan AI yang anda miliki.
         - Namun, setiap informasi yang disampaikan agar diberikan penanda atau flag bahwa informasi itu dari: "Sumber: Database" atau "Sumber: AI" atau keduanya "Sumber: Database dan AI".
@@ -73,7 +74,7 @@ def regulationFormAgent(state: AgentState):
         Tuliskan regulasinya secara implisit pada tempat-tempat atau point tertentu di deskripsinya jika ada pada database, namun jika tidak ada informasi regulasi yang cocok dengan database maka katakan informasi regulasi pada database belum tersedia, tapi tetap sampaikan informasi awal.
         - Berikut informasi regulasi dari database: {context}
         - Berikut informasi deskripsinya: {state["travelplannerResponse"]}
-        Jangan mengubah isi dari informasi deskripsi yang diberikan, hanya tambahkan regulasi jika ada saja.
+        Jangan mengubah isi dan sumber yang ada pada informasi, hanya tambahkan regulasi jika ada saja.
     """
     messages = [
         SystemMessage(content=prompt)
