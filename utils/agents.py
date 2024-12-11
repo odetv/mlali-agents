@@ -101,7 +101,6 @@ def generalAgent(state: AgentState):
     agentOpinion = {
         "answer": response
     }
-    print("\n\nGENERAL ANSWER:::", response)
     state["finishedAgents"].add("general_agent")
     return {"answerAgents": [agentOpinion]}
 
@@ -125,7 +124,9 @@ def travelGuideAgent(state: AgentState):
     prompt = f"""
         Anda adalah Travel Guide dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang pemandu perjalanan berwisata.
         Tugas anda adalah memberikan panduan perjalanan wisata kepada pengguna sesuai dengan konteks.
-        Hanya gunakan informasi dari konteks berikut: {context}
+        - Berikut data yang ada pada database: {context}
+        - Anda boleh menjawab menggunakan pengetahuan AI yang anda miliki.
+        - Namun, setiap informasi yang disampaikan agar diberikan penanda atau flag bahwa informasi itu dari: "Sumber: Database" atau "Sumber: AI" atau keduanya "Sumber: Database dan AI".
     """
     messages = [
         SystemMessage(content=prompt),
@@ -142,25 +143,38 @@ def regulationAgent(state: AgentState):
     print("\n--- REGULATION AGENT ---")
 
     travelguideResponse = state.get("travelguideResponse", "")
-
     if not travelguideResponse:
         travelguideResponse = ""
 
+    question = travelguideResponse
+    
+    try:
+        vectordb = FAISS.load_local("src/db/db_regulation", EMBEDDER, allow_dangerous_deserialization=True)
+        retriever = vectordb.similarity_search(question, k=5)
+        context = "\n\n".join([doc.page_content for doc in retriever])
+    except RuntimeError as e:
+        if "could not open" in str(e):
+            raise RuntimeError("Vector database FAISS index file not found. Please ensure the index file exists at the specified path.")
+        else:
+            raise
+
     prompt = f"""
         Anda adalah Travel Regulation dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang regulasi atau aturan-aturan pada tempat-tempat atau daerah wisata.
-        Tugas anda adalah memberikan aturan-aturan regulasi pada suatu daerah atau tempat wisata kepada pengguna sesuai informasi yang dituju.
-        Jangan mengubah isi dari informasi yang diberikan, cukup tambahkan regulasi atau aturan-aturan sesuai dengan informasi yang diberikan.
-        Tuliskan regulasinya secara implisit pada deskripsinya.
-        Berikut adalah informasinya: {travelguideResponse}
+        Tugas anda adalah memberikan aturan-aturan regulasi pada suatu daerah atau tempat wisata kepada pengguna sesuai informasi yang diberikan.
+        Jangan mengubah isi dari informasi yang diberikan.
+        Tuliskan regulasinya secara implisit pada tempat-tempat atau point tertentu di deskripsinya jika ada pada database, namun jika tidak ada informasi regulasi yang cocok dengan database maka katakan informasi regulasi pada database belum tersedia, tapi tetap sampaikan informasi awal.
+        - Berikut informasi regulasi dari database: {context}
+        - Berikut informasi deskripsinya: {travelguideResponse}
+        Jangan mengubah isi dan sumber yang ada pada informasi, hanya tambahkan regulasi jika ada saja.
     """
     messages = [
         SystemMessage(content=prompt)
     ]
+
     response = chat_llm(messages)
     agentOpinion = {
         "answer": response
     }
-    print("\n\nREGULATION ANSWER:::", response)
     state["finishedAgents"].add("regulation_agent")
     return {"answerAgents": [agentOpinion]}
 
@@ -178,10 +192,9 @@ def resultWriterAgent(state: AgentState):
         prompt = f"""
             Berikut pedoman yang harus diikuti untuk menulis ulang informasi:
             - Berikan informasi secara lengkap dan jelas apa adanya sesuai informasi yang diberikan.
-            - Urutan informasi sesuai dengan urutan pertanyaan.
-            - Jangan menyebut ulang pertanyaan secara eksplisit.
             - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
             - Jangan tawarkan informasi lainnya selain informasi yang diberikan yang didapat saja.
+            - Jangan mengubah seperti isi, sumber dan regulasi yang ada pada informasi.
             - Hasilkan response dalam format Markdown.
             Berikut adalah informasinya:
             {state["answerAgents"]}
