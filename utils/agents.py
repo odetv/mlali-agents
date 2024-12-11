@@ -75,12 +75,10 @@ def assistantAgent(state: AgentState):
 
     state["generalQuestion"] = result_dict.get("general_agent", None)
     state["travelguideQuestion"] = result_dict.get("travelguide_agent", None)
-    state["travelplannerQuestion"] = result_dict.get("travelplanner_agent", None)
     state["regulationQuestion"] = result_dict.get("regulation_agent", None)
     
     print(f"DEBUG: generalQuestion: {state['generalQuestion']}")
     print(f"DEBUG: travelguideQuestion: {state['travelguideQuestion']}")
-    print(f"DEBUG: travelplannerQuestion: {state['travelplannerQuestion']}")
     print(f"DEBUG: regulationQuestion: {state['regulationQuestion']}")
 
     return state
@@ -129,13 +127,11 @@ def travelGuideAgent(state: AgentState):
         Tugas anda adalah memberikan panduan perjalanan wisata kepada pengguna sesuai dengan konteks.
         Hanya gunakan informasi dari konteks berikut: {context}
     """
-    print("context:::", prompt)
     messages = [
         SystemMessage(content=prompt),
         HumanMessage(content=question)
     ]
     response = chat_llm(messages)
-    print("\n\nTRAVELGUIDE ANSWER:::", response)
     state["finishedAgents"].add("tarvelguide_agent")
     state["travelguideResponse"] = response
     return state
@@ -146,19 +142,16 @@ def regulationAgent(state: AgentState):
     print("\n--- REGULATION AGENT ---")
 
     travelguideResponse = state.get("travelguideResponse", "")
-    travelplannerResponse = state.get("travelplannerResponse", "")
 
     if not travelguideResponse:
         travelguideResponse = ""
-    if not travelplannerResponse:
-        travelplannerResponse = ""
 
     prompt = f"""
         Anda adalah Travel Regulation dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang regulasi atau aturan-aturan pada tempat-tempat atau daerah wisata.
         Tugas anda adalah memberikan aturan-aturan regulasi pada suatu daerah atau tempat wisata kepada pengguna sesuai informasi yang dituju.
         Jangan mengubah isi dari informasi yang diberikan, cukup tambahkan regulasi atau aturan-aturan sesuai dengan informasi yang diberikan.
         Tuliskan regulasinya secara implisit pada deskripsinya.
-        Berikut adalah informasinya: {travelguideResponse} {travelplannerResponse}
+        Berikut adalah informasinya: {travelguideResponse}
     """
     messages = [
         SystemMessage(content=prompt)
@@ -171,23 +164,6 @@ def regulationAgent(state: AgentState):
     state["finishedAgents"].add("regulation_agent")
     return {"answerAgents": [agentOpinion]}
 
-
-@time_check
-def travelPlannerAgent(state: AgentState):
-    print("\n--- TRAVELPLANNER AGENT ---")
-    prompt = f"""
-        Anda adalah Travel Planner dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang perencanaan dalam perjalanan wisata.
-        Tugas anda adalah memberikan perencanaan sesuai dengan origin atau asal pengguna, destination atau tujuan pengguna, dan preference atau hal-hal yang diinginkan pengguna sesuai permintaannya.
-    """
-    messages = [
-        SystemMessage(content=prompt),
-        HumanMessage(content=state["question"])
-    ]
-    response = chat_llm(messages)
-    print("\n\nTRAVELPLANNER ANSWER:::", response)
-    state["finishedAgents"].add("travelplanner_agent")
-    state["travelplannerResponse"] = response
-    return state["travelplannerResponse"]
 
 
 @time_check
