@@ -65,5 +65,5 @@ def runModelWithForm(origin, destination, preference):
 
 
 # DEBUG QUESTION
-runModelWithForm("SINGARAJA", "DASONG PANCASARI", "mencari glamping")
+# runModelWithForm("SINGARAJA", "DASONG PANCASARI", "mencari glamping")
 # runModel("saya dari buleleng, ingin glamping")
