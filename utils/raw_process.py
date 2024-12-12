@@ -2,7 +2,7 @@ import os
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from utils.llm import EMBEDDER
+from llm import EMBEDDER
 
 
 def processRegulation():

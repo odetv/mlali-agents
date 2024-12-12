@@ -145,7 +145,7 @@ def regulationAgent(state: AgentState):
     if not travelguideResponse:
         travelguideResponse = ""
 
-    question = f"""{state["question"]} {state["travelGuideResponseKeyword"]}"""
+    question = state["travelGuideResponseKeyword"]
     
     try:
         vectordb = FAISS.load_local("src/db/db_regulation", EMBEDDER, allow_dangerous_deserialization=True)
