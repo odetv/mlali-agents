@@ -1,24 +1,13 @@
-
-import os
 import re
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_community.vectorstores import FAISS
-from dotenv import load_dotenv
 from utils.debug_time import time_check
 from utils.states import AgentState
-
-
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-MODEL_LLM = "gpt-4o-mini"
-LLM = ChatOpenAI(api_key=openai_api_key, model=MODEL_LLM, temperature=0, streaming=True)
-MODEL_EMBEDDING = "text-embedding-3-small"
-EMBEDDER = OpenAIEmbeddings(api_key=openai_api_key, model=MODEL_EMBEDDING)
+from utils.llm import LLM, EMBEDDER
 
 
 def chat_llm(question: str):
-    openai = ChatOpenAI(api_key=openai_api_key, model=MODEL_LLM, temperature=0, streaming=True)
+    openai = LLM
     result = ""
     try:
         stream_response = openai.stream(question)
@@ -98,11 +87,9 @@ def generalAgent(state: AgentState):
         HumanMessage(content=state["generalQuestion"])
     ]
     response = chat_llm(messages)
-    agentOpinion = {
-        "answer": response
-    }
-    state["finishedAgents"].add("general_agent")
-    return {"answerAgents": [agentOpinion]}
+    state["responseFinal"] = response
+
+    return state
 
 
 @time_check
@@ -147,7 +134,6 @@ def travelGuideAgent(state: AgentState):
     responseKeyword = chat_llm(messagesKeyword)
     state["travelGuideResponseKeyword"] = responseKeyword
 
-    state["finishedAgents"].add("tarvelguide_agent")
     return state
 
 
@@ -185,39 +171,37 @@ def regulationAgent(state: AgentState):
     ]
 
     response = chat_llm(messages)
-    agentOpinion = {
-        "answer": response
-    }
-    state["finishedAgents"].add("regulation_agent")
-    return {"answerAgents": [agentOpinion]}
-
-
-
-@time_check
-def resultWriterAgent(state: AgentState):
-    if len(state["finishedAgents"]) < state["totalAgents"]:
-        print("\nMenunggu agent lain menyelesaikan tugas...")
-        return None
+    state["responseFinal"] = response
     
-    elif len(state["finishedAgents"]) == state["totalAgents"]:
-        info = "\n--- RESULT WRITER AGENT ---"
-        print(info)
-        prompt = f"""
-            Berikut pedoman yang harus diikuti untuk menulis ulang informasi:
-            - Berikan informasi secara lengkap dan jelas apa adanya sesuai informasi yang diberikan.
-            - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
-            - Jangan tawarkan informasi lainnya selain informasi yang diberikan yang didapat saja.
-            - Jangan pernah mengubah seperti isi, sumber dan regulasi yang tercantum pada informasi, karena tugas anda adalah menulis ulang informasi.
-            - Hasilkan response dalam format Markdown.
-            Berikut adalah informasinya:
-            {state["answerAgents"]}
-        """
-        messages = [
-            SystemMessage(content=prompt),
-            HumanMessage(content=state["question"])
-        ]
-        response = chat_llm(messages)
-        print(response)
-        state["responseFinal"] = response
+    return state
 
-        return {"responseFinal": state["responseFinal"]}
+
+
+# @time_check
+# def resultWriterAgent(state: AgentState):
+#     if len(state["finishedAgents"]) < state["totalAgents"]:
+#         print("\nMenunggu agent lain menyelesaikan tugas...")
+#         return None
+    
+#     elif len(state["finishedAgents"]) == state["totalAgents"]:
+#         info = "\n--- RESULT WRITER AGENT ---"
+#         print(info)
+#         prompt = f"""
+#             Berikut pedoman yang harus diikuti untuk menulis ulang informasi:
+#             - Berikan informasi secara lengkap dan jelas apa adanya sesuai informasi yang diberikan.
+#             - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
+#             - Jangan tawarkan informasi lainnya selain informasi yang diberikan yang didapat saja.
+#             - Jangan pernah mengubah seperti isi, sumber dan regulasi yang tercantum pada informasi, karena tugas anda adalah menulis ulang informasi.
+#             - Hasilkan response dalam format Markdown.
+#             Berikut adalah informasinya:
+#             {state["answerAgents"]}
+#         """
+#         messages = [
+#             SystemMessage(content=prompt),
+#             HumanMessage(content=state["question"])
+#         ]
+#         response = chat_llm(messages)
+#         print(response)
+#         state["responseFinal"] = response
+
+#         return {"responseFinal": state["responseFinal"]}

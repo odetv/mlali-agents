@@ -1,16 +1,8 @@
-import os
-from langchain_openai import OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_community.vectorstores import FAISS
 from utils.states import AgentState
 from utils.agents import chat_llm
-from dotenv import load_dotenv
-
-
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-MODEL_EMBEDDING = "text-embedding-3-small"
-EMBEDDER = OpenAIEmbeddings(api_key=openai_api_key, model=MODEL_EMBEDDING)
+from utils.llm import EMBEDDER
 
 
 def travelPlannerFormAgent(state: AgentState):
@@ -89,5 +81,6 @@ def regulationFormAgent(state: AgentState):
         SystemMessage(content=prompt)
     ]
     response = chat_llm(messages)
-    state["regulationResponse"] = response
+    state["responseFinal"] = response
+    
     return state
