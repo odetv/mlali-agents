@@ -1,24 +1,13 @@
-
-import os
 import re
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_community.vectorstores import FAISS
-from dotenv import load_dotenv
 from utils.debug_time import time_check
 from utils.states import AgentState
-
-
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-MODEL_LLM = "gpt-4o-mini"
-LLM = ChatOpenAI(api_key=openai_api_key, model=MODEL_LLM, temperature=0, streaming=True)
-MODEL_EMBEDDING = "text-embedding-3-small"
-EMBEDDER = OpenAIEmbeddings(api_key=openai_api_key, model=MODEL_EMBEDDING)
+from utils.llm import LLM, EMBEDDER
 
 
 def chat_llm(question: str):
-    openai = ChatOpenAI(api_key=openai_api_key, model=MODEL_LLM, temperature=0, streaming=True)
+    openai = LLM
     result = ""
     try:
         stream_response = openai.stream(question)
@@ -42,9 +31,8 @@ def assistantAgent(state: AgentState):
     promptTypeQuestion = """
         Anda adalah seoarang pemecah pertanyaan pengguna.
         Tergantung pada jawaban Anda, akan mengarahkan ke agent yang tepat.
-        Ada 4 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
+        Ada 3 konteks diajukan (Pilih hanya 1 konteks yang paling sesuai saja):
         - TRAVELGUIDE_AGENT - Jika pertanyaan mengacu pada tujuan wisata saja atau disebutkan juga dia darimana.
-        - TRAVELPLANNER_AGENT - Hanya jika pengguna dengan jelas mengatakan tempat asal, kemudian tempat tujuan dan prefrensinya secara lengkap.
         - REGULATION_AGENT - Pertanyaan yang menyebutkan mengenai regulasi atau aturan-aturan yang perlu disiapkan di tempat wisata atau tempat-tempat tertentu yang vital.
         - GENERAL_AGENT - Ketika pertanyaan diluar nalar (berwisata ke luar angkasa, tempat yang tidak nyata dan lain-lain) tidak jelas dalam konteks mencari tempat wisata, dan tidak sesuai dengan konteks diatas. 
         Jawab pertanyaan dan sertakan pertanyaan pengguna dengan contoh seperti {"NAMA_AGENT": "pertanyaan pengguna"}.
@@ -64,8 +52,6 @@ def assistantAgent(state: AgentState):
         total_agents += 1
     if "travelguide_agent" in state["question_type"]:
         total_agents += 2
-    if "travelplanner_agent" in state["question_type"]:
-        total_agents += 2
     if "regulation_agent" in state["question_type"]:
         total_agents += 1
 
@@ -78,12 +64,10 @@ def assistantAgent(state: AgentState):
 
     state["generalQuestion"] = result_dict.get("general_agent", None)
     state["travelguideQuestion"] = result_dict.get("travelguide_agent", None)
-    state["travelplannerQuestion"] = result_dict.get("travelplanner_agent", None)
     state["regulationQuestion"] = result_dict.get("regulation_agent", None)
     
     print(f"DEBUG: generalQuestion: {state['generalQuestion']}")
     print(f"DEBUG: travelguideQuestion: {state['travelguideQuestion']}")
-    print(f"DEBUG: travelplannerQuestion: {state['travelplannerQuestion']}")
     print(f"DEBUG: regulationQuestion: {state['regulationQuestion']}")
 
     return state
@@ -103,12 +87,9 @@ def generalAgent(state: AgentState):
         HumanMessage(content=state["generalQuestion"])
     ]
     response = chat_llm(messages)
-    agentOpinion = {
-        "answer": response
-    }
-    print("\n\nGENERAL ANSWER:::", response)
-    state["finishedAgents"].add("general_agent")
-    return {"answerAgents": [agentOpinion]}
+    state["responseFinal"] = response
+
+    return state
 
 
 @time_check
@@ -130,17 +111,29 @@ def travelGuideAgent(state: AgentState):
     prompt = f"""
         Anda adalah Travel Guide dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang pemandu perjalanan berwisata.
         Tugas anda adalah memberikan panduan perjalanan wisata kepada pengguna sesuai dengan konteks.
-        Hanya gunakan informasi dari konteks berikut: {context}
+        - Berikut data yang ada pada database: {context}
+        - Anda boleh menjawab menggunakan pengetahuan AI yang anda miliki.
+        - Namun, setiap informasi yang disampaikan agar diberikan penanda atau flag bahwa informasi itu dari: "Sumber: Database" atau "Sumber: AI" atau keduanya "Sumber: Database dan AI".
     """
-    print("context:::", prompt)
     messages = [
         SystemMessage(content=prompt),
         HumanMessage(content=question)
     ]
     response = chat_llm(messages)
-    print("\n\nTRAVELGUIDE ANSWER:::", response)
-    state["finishedAgents"].add("tarvelguide_agent")
     state["travelguideResponse"] = response
+
+    promptKeyword = f"""
+        Berikan keyword nama-nama tempat dari informasi berikut: {response}
+        - Contoh penulisan: (Keyword: Glamour, Kebun Binatang, Museum)
+        - Pisahkan dengan tanda koma.
+        - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
+    """
+    messagesKeyword = [
+        SystemMessage(content=promptKeyword)
+    ]
+    responseKeyword = chat_llm(messagesKeyword)
+    state["travelGuideResponseKeyword"] = responseKeyword
+
     return state
 
 
@@ -149,76 +142,66 @@ def regulationAgent(state: AgentState):
     print("\n--- REGULATION AGENT ---")
 
     travelguideResponse = state.get("travelguideResponse", "")
-    travelplannerResponse = state.get("travelplannerResponse", "")
-
     if not travelguideResponse:
         travelguideResponse = ""
-    if not travelplannerResponse:
-        travelplannerResponse = ""
+
+    question = state["travelGuideResponseKeyword"]
+    
+    try:
+        vectordb = FAISS.load_local("src/db/db_regulation", EMBEDDER, allow_dangerous_deserialization=True)
+        retriever = vectordb.similarity_search(question, k=5)
+        context = "\n\n".join([doc.page_content for doc in retriever])
+    except RuntimeError as e:
+        if "could not open" in str(e):
+            raise RuntimeError("Vector database FAISS index file not found. Please ensure the index file exists at the specified path.")
+        else:
+            raise
 
     prompt = f"""
         Anda adalah Travel Regulation dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang regulasi atau aturan-aturan pada tempat-tempat atau daerah wisata.
-        Tugas anda adalah memberikan aturan-aturan regulasi pada suatu daerah atau tempat wisata kepada pengguna sesuai informasi yang dituju.
-        Jangan mengubah isi dari informasi yang diberikan, cukup tambahkan regulasi atau aturan-aturan sesuai dengan informasi yang diberikan.
-        Tuliskan regulasinya secara implisit pada deskripsinya.
-        Berikut adalah informasinya: {travelguideResponse} {travelplannerResponse}
+        Tugas anda adalah memberikan aturan-aturan regulasi pada suatu daerah atau tempat wisata kepada pengguna sesuai informasi yang diberikan.
+        Jangan mengubah isi dari informasi yang diberikan.
+        Tuliskan regulasinya secara implisit pada tempat-tempat atau point tertentu di deskripsinya jika ada pada database, namun jika tidak ada informasi regulasi yang cocok dengan database maka katakan informasi regulasi pada database belum tersedia, tapi tetap sampaikan informasi awal.
+        - Berikut informasi regulasi dari database: {context}
+        - Berikut informasi deskripsinya: {travelguideResponse}
+        Jangan mengubah isi dan sumber yang ada pada informasi, hanya tambahkan regulasi jika ada saja.
     """
     messages = [
         SystemMessage(content=prompt)
     ]
-    response = chat_llm(messages)
-    agentOpinion = {
-        "answer": response
-    }
-    print("\n\nREGULATION ANSWER:::", response)
-    state["finishedAgents"].add("regulation_agent")
-    return {"answerAgents": [agentOpinion]}
 
-
-@time_check
-def travelPlannerAgent(state: AgentState):
-    print("\n--- TRAVELPLANNER AGENT ---")
-    prompt = f"""
-        Anda adalah Travel Planner dalam Mlali Agents, yang memiliki pengetahuan yang sangat luas dan hebat hanya tentang perencanaan dalam perjalanan wisata.
-        Tugas anda adalah memberikan perencanaan sesuai dengan origin atau asal pengguna, destination atau tujuan pengguna, dan preference atau hal-hal yang diinginkan pengguna sesuai permintaannya.
-    """
-    messages = [
-        SystemMessage(content=prompt),
-        HumanMessage(content=state["travelplannerQuestion"])
-    ]
     response = chat_llm(messages)
-    print("\n\nTRAVELPLANNER ANSWER:::", response)
-    state["finishedAgents"].add("travelplanner_agent")
-    state["travelplannerResponse"] = response
+    state["responseFinal"] = response
+    
     return state
 
 
-@time_check
-def resultWriterAgent(state: AgentState):
-    if len(state["finishedAgents"]) < state["totalAgents"]:
-        print("\nMenunggu agent lain menyelesaikan tugas...")
-        return None
-    
-    elif len(state["finishedAgents"]) == state["totalAgents"]:
-        info = "\n--- RESULT WRITER AGENT ---"
-        print(info)
-        prompt = f"""
-            Berikut pedoman yang harus diikuti untuk menulis ulang informasi:
-            - Berikan informasi secara lengkap dan jelas apa adanya sesuai informasi yang diberikan.
-            - Urutan informasi sesuai dengan urutan pertanyaan.
-            - Jangan menyebut ulang pertanyaan secara eksplisit.
-            - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
-            - Jangan tawarkan informasi lainnya selain informasi yang diberikan yang didapat saja.
-            - Hasilkan response dalam format Markdown.
-            Berikut adalah informasinya:
-            {state["answerAgents"]}
-        """
-        messages = [
-            SystemMessage(content=prompt),
-            HumanMessage(content=state["question"])
-        ]
-        response = chat_llm(messages)
-        print(response)
-        state["responseFinal"] = response
 
-        return {"responseFinal": state["responseFinal"]}
+# @time_check
+# def resultWriterAgent(state: AgentState):
+#     if len(state["finishedAgents"]) < state["totalAgents"]:
+#         print("\nMenunggu agent lain menyelesaikan tugas...")
+#         return None
+    
+#     elif len(state["finishedAgents"]) == state["totalAgents"]:
+#         info = "\n--- RESULT WRITER AGENT ---"
+#         print(info)
+#         prompt = f"""
+#             Berikut pedoman yang harus diikuti untuk menulis ulang informasi:
+#             - Berikan informasi secara lengkap dan jelas apa adanya sesuai informasi yang diberikan.
+#             - Jangan menjawab selain menggunakan informasi pada informasi yang diberikan, sampaikan dengan apa adanya jika Anda tidak mengetahui jawabannya.
+#             - Jangan tawarkan informasi lainnya selain informasi yang diberikan yang didapat saja.
+#             - Jangan pernah mengubah seperti isi, sumber dan regulasi yang tercantum pada informasi, karena tugas anda adalah menulis ulang informasi.
+#             - Hasilkan response dalam format Markdown.
+#             Berikut adalah informasinya:
+#             {state["answerAgents"]}
+#         """
+#         messages = [
+#             SystemMessage(content=prompt),
+#             HumanMessage(content=state["question"])
+#         ]
+#         response = chat_llm(messages)
+#         print(response)
+#         state["responseFinal"] = response
+
+#         return {"responseFinal": state["responseFinal"]}

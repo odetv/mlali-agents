@@ -14,8 +14,13 @@ class AgentState(TypedDict):
     travelplannerQuestion: str
     regulationQuestion: str
     travelguideResponse: str
+    travelGuideResponseKeyword: str
     travelplannerResponse: str
+    travelplannerResponseKeyword: str
     totalAgents: int
     finishedAgents: Set[str]
     answerAgents: Annotated[Sequence[AnswerState], add]
     responseFinal: str
+    origin: str
+    destination: str
+    preference: str
