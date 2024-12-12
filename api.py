@@ -15,7 +15,7 @@ from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
-from main import runModel
+from main import runModel, runModelWithForm
 
 
 load_dotenv()
@@ -50,7 +50,10 @@ class ProcessRequest(BaseModel):
     chunk_overlap: int
     class Config:
         protected_namespaces = ()
-
+class ChatFormRequest(BaseModel):
+    origin: str
+    destination: str
+    preference: str
 
 # Metadata API
 tags_metadata = [
@@ -79,6 +82,7 @@ app = FastAPI(
     title="API Mlali Agents",
     summary="API Mlali Agents",
     version="0.0.1",
+    root_path="/api-ai",
     docs_url="/docs",
     redoc_url="/help",
     openapi_url="/openapimlali.json"
@@ -799,6 +803,46 @@ async def chat_conversation(request: QuestionRequest, request_http: Request, tok
             status_code=500,
             success=False,
             message=f"Terjadi kesalahan yang tidak terduga. Pastikan LLM dan Embedder Service yang digunakan pada environment 'openai', lakukan proses embedding ulang, dan silahkan coba kembali. Jika masalah ini terus muncul, kemungkinan terdapat masalah pada LLM atau Embedder Service. {str(e)}",
+            data=None
+        )
+
+
+# Endpoint untuk chat form recommendation
+@app.post("/chat-form-recommendation", tags=["chat"])
+async def chat_form_recommendation(request: ChatFormRequest, token: str = Depends(verify_bearer_token)):
+    timestamp = get_current_time()
+    origin = request.origin
+    destination = request.destination
+    preference = request.preference
+
+    if not request.origin:
+        raise HTTPException(status_code=400, detail="Origin tidak boleh kosong.")
+    if not request.destination:
+        raise HTTPException(status_code=400, detail="Destination tidak boleh kosong.")
+    if not request.preference:
+        raise HTTPException(status_code=400, detail="Preference tidak boleh kosong.")
+
+    try:
+        _, answers = runModelWithForm(origin, destination, preference)
+        return api_response(
+            status_code=200,
+            success=True,
+            message="OK",
+            data=[{
+                "timestamp": timestamp,
+                "origin": origin,
+                "destination": destination,
+                "preference": preference,
+                "answers": answers
+            }]
+        )
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"{e.detail}")
+    except Exception as e:
+        return api_response(
+            status_code=500,
+            success=False,
+            message=f"An unexpected error occurred. Ensure that the LLM and Embedder Service used in the environment are 'openai', perform the embedding process again, and please try again. If this problem persists, there may be a problem with the LLM or Embedder Service. {str(e)}",
             data=None
         )
 
