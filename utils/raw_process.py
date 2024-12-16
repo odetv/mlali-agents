@@ -1,13 +1,8 @@
 import os
-from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
-
-
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
+from llm import EMBEDDER
 
 
 def processRegulation():
@@ -29,7 +24,7 @@ def processRegulation():
     )
     chunks = text_splitter.split_documents(documents)
 
-    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-small"))
+    vectordb = FAISS.from_documents(chunks, EMBEDDER)
     vectordb.save_local(VECTORDB_DIR)
 
 
@@ -52,7 +47,7 @@ def processTravelGuide():
     )
     chunks = text_splitter.split_documents(documents)
 
-    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-small"))
+    vectordb = FAISS.from_documents(chunks, EMBEDDER)
     vectordb.save_local(VECTORDB_DIR)
 
 
@@ -75,7 +70,7 @@ def processTravelPlanner():
     )
     chunks = text_splitter.split_documents(documents)
 
-    vectordb = FAISS.from_documents(chunks, OpenAIEmbeddings(api_key=openai_api_key, model="text-embedding-3-small"))
+    vectordb = FAISS.from_documents(chunks, EMBEDDER)
     vectordb.save_local(VECTORDB_DIR)
 
 
